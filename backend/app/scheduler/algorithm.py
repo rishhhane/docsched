@@ -1,5 +1,6 @@
 import datetime
 import calendar
+import random
 from app.models import Doctor, Leave, Schedule
 
 def get_previous_shift_doctors(session, date, shift):
@@ -98,7 +99,7 @@ def select_best_doctor(session, candidates, workload_map, shift, date, schedules
             stretch_pref,
             workload_map[doc.id][shift],
             workload_map[doc.id]['total'],
-            doc.id
+            random.random()
         )
         
     return min(candidates, key=get_sort_key)

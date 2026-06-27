@@ -1,9 +1,9 @@
 import React from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useSchedule, useUpdateSchedule, useDoctors } from '../api/apiClient';
+import { useSchedule, useUpdateSchedule, useDoctors, useGenerateSchedule } from '../api/apiClient';
 import ScheduleTable from '../components/ScheduleTable';
 import StatsPanel from '../components/StatsPanel';
-import { Download, Sun, Moon, ArrowLeft, Loader2, Calendar, Undo, Redo, AlertTriangle } from 'lucide-react';
+import { Download, Sun, Moon, ArrowLeft, Loader2, Calendar, Undo, Redo, AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,6 +25,7 @@ export default function Dashboard() {
 
   // Initialize the inline update mutation
   const updateScheduleMutation = useUpdateSchedule(month, year);
+  const generateScheduleMutation = useGenerateSchedule();
 
   const doctorLeavesMap = React.useMemo(() => {
     const map = {};
@@ -133,6 +134,21 @@ export default function Dashboard() {
       id: action.id,
       ...action.updatedFields
     });
+  };
+
+  const handleRegenerate = () => {
+    if (window.confirm("Are you sure you want to regenerate the schedule? This will overwrite your current swaps and custom changes for this month.")) {
+      generateScheduleMutation.mutate(
+        { month, year },
+        {
+          onSuccess: () => {
+            // Clear undo/redo stacks since the schedule is completely fresh
+            setUndoStack([]);
+            setRedoStack([]);
+          }
+        }
+      );
+    }
   };
 
   const morningScrollRef = React.useRef(null);
@@ -319,6 +335,16 @@ export default function Dashboard() {
             className="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition-all hover-scale shadow-sm"
           >
             Adjust Configuration
+          </button>
+
+          <button
+            onClick={handleRegenerate}
+            disabled={generateScheduleMutation.isPending}
+            className="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition-all hover-scale shadow-sm flex items-center gap-1.5"
+            title="Regenerate a different schedule with the same rules"
+          >
+            <RefreshCw className={`w-4 h-4 ${generateScheduleMutation.isPending ? 'animate-spin' : ''}`} />
+            {generateScheduleMutation.isPending ? 'Regenerating...' : 'Regenerate'}
           </button>
           
           <a
