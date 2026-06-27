@@ -1,0 +1,17 @@
+# Python/Flask
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/scheduler.db
+backend/instance/
+
+# Node/React
+frontend/node_modules/
+frontend/dist/
+frontend/.env*
+
+# IDE/OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

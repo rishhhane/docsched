@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-900: #4c1d95;
+  
+  --color-primary-50: #f0fdf4;
+  --color-primary-100: #dcfce7;
+  --color-primary-500: #22c55e;
+  --color-primary-600: #16a34a;
+  --color-primary-700: #15803d;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased min-h-screen;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom scrollbar for scrollable schedule grids */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-200 rounded;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400 rounded hover:bg-slate-500 transition-colors;
+}
+
+/* Glassmorphism utility panel */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* Smooth transition utility classes */
+.hover-scale {
+  @apply transition-all duration-300 hover:scale-[1.02] active:scale-[0.98];
+}
+
+/* Premium Glow Button styles */
+.glow-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px 0 rgba(124, 58, 237, 0.25);
+}
+
+.glow-btn:hover {
+  box-shadow: 0 6px 18px 0 rgba(124, 58, 237, 0.45);
+}
+
