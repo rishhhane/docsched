@@ -49,6 +49,14 @@ export default function Home() {
   const p2Count = doctors.filter(d => d.priority === 2).length;
   const p3Count = doctors.filter(d => d.priority === 3).length;
 
+  // Sort doctors by priority tier, then alphabetically by name
+  const sortedDoctors = [...doctors].sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Welcome header banner */}
@@ -196,7 +204,7 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-sm">
-                  {doctors.map((doc) => (
+                  {sortedDoctors.map((doc) => (
                     <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3.5 px-3 font-semibold text-slate-700">{doc.name}</td>
                       <td className="py-3.5 px-3 text-center">
