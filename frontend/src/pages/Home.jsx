@@ -37,10 +37,8 @@ export default function Home() {
     );
   };
 
-  const handleDelete = (id, docName) => {
-    if (window.confirm(`Are you sure you want to remove ${docName}? This will clear their schedule assignments and leaves.`)) {
-      deleteDoctorMutation.mutate(id);
-    }
+  const handleDelete = (id) => {
+    deleteDoctorMutation.mutate(id);
   };
 
   // Metrics
@@ -227,7 +225,7 @@ export default function Home() {
                       </td>
                       <td className="py-3.5 px-3 text-right">
                         <button
-                          onClick={() => handleDelete(doc.id, doc.name)}
+                          onClick={() => handleDelete(doc.id)}
                           disabled={deleteDoctorMutation.isPending}
                           className="text-rose-600 hover:text-rose-500 p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all duration-200 shadow-sm"
                           title="Delete Doctor"

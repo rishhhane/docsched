@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSchedule, useUpdateSchedule, useDoctors } from '../api/apiClient';
 import ScheduleTable from '../components/ScheduleTable';
 import StatsPanel from '../components/StatsPanel';
-import { Download, Sun, Moon, ArrowLeft, Loader2, Calendar, Undo, Redo } from 'lucide-react';
+import { Download, Sun, Moon, ArrowLeft, Loader2, Calendar, Undo, Redo, AlertTriangle } from 'lucide-react';
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -12,6 +12,9 @@ export default function Dashboard() {
   const now = new Date();
   const month = parseInt(searchParams.get('month') || (now.getMonth() + 1).toString());
   const year = parseInt(searchParams.get('year') || now.getFullYear().toString());
+
+  const [showConflictModal, setShowConflictModal] = React.useState(false);
+  const [conflictDetails, setConflictDetails] = React.useState({ leaveCount: 0, consecutiveCount: 0 });
 
   // Fetch schedule and stats
   const { data, isLoading, error } = useSchedule(month, year);
@@ -154,6 +157,44 @@ export default function Dashboard() {
     return new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
   };
 
+  const handleDownloadPDF = (e) => {
+    // Check for violations
+    const hasConsecutive = consecutiveViolations.size > 0;
+    const hasLeaveViolations = schedules.some(s => {
+      const doc1OnLeave = s.doctor_1 && doctorLeavesMap[s.doctor_1.id]?.has(s.date);
+      const doc2OnLeave = s.doctor_2 && doctorLeavesMap[s.doctor_2.id]?.has(s.date);
+      const doc3OnLeave = s.doctor_3 && doctorLeavesMap[s.doctor_3.id]?.has(s.date);
+      return doc1OnLeave || doc2OnLeave || doc3OnLeave;
+    });
+
+    if (hasConsecutive || hasLeaveViolations) {
+      e.preventDefault();
+      // Calculate conflict counts
+      let leaveCount = 0;
+      schedules.forEach(s => {
+        if (s.doctor_1 && doctorLeavesMap[s.doctor_1.id]?.has(s.date)) leaveCount++;
+        if (s.doctor_2 && doctorLeavesMap[s.doctor_2.id]?.has(s.date)) leaveCount++;
+        if (s.doctor_3 && doctorLeavesMap[s.doctor_3.id]?.has(s.date)) leaveCount++;
+      });
+      
+      setConflictDetails({
+        leaveCount,
+        consecutiveCount: consecutiveViolations.size
+      });
+      setShowConflictModal(true);
+    }
+  };
+
+  const triggerDownload = () => {
+    const downloadUrl = `/api/export/pdf?month=${month}&year=${year}`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.setAttribute('download', `schedule_${year}_${month}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -282,7 +323,7 @@ export default function Dashboard() {
           
           <a
             href={`/api/export/pdf?month=${month}&year=${year}`}
-            download
+            onClick={handleDownloadPDF}
             className="glow-btn flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover-scale"
           >
             <Download className="w-5 h-5" />
@@ -336,6 +377,67 @@ export default function Dashboard() {
             rankings={data?.rankings || []}
           />
         </>
+      )}
+
+      {showConflictModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-6 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-600 shrink-0">
+                <AlertTriangle className="w-6 h-6 animate-bounce" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-slate-800">
+                  Scheduling Conflicts Detected
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                  {getMonthName(month)} {year} Report
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+              <p className="text-sm text-slate-600 leading-relaxed">
+                The current schedule contains active conflicts that violate scheduling rules:
+              </p>
+              <ul className="space-y-2 text-xs font-semibold text-slate-700">
+                {conflictDetails.leaveCount > 0 && (
+                  <li className="flex items-center gap-2 text-rose-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    {conflictDetails.leaveCount} shift{conflictDetails.leaveCount > 1 ? 's' : ''} assigned to doctors on leave.
+                  </li>
+                )}
+                {conflictDetails.consecutiveCount > 0 && (
+                  <li className="flex items-center gap-2 text-amber-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    {conflictDetails.consecutiveCount} shift assignment{conflictDetails.consecutiveCount > 1 ? 's' : ''} with consecutive violations.
+                  </li>
+                )}
+              </ul>
+              <p className="text-[11px] text-slate-500 italic mt-2">
+                We recommend resolving these swaps before exporting the PDF.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowConflictModal(false)}
+                className="flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl border border-slate-200 shadow-sm transition-all hover-scale"
+              >
+                Cancel & Fix
+              </button>
+              <button
+                onClick={() => {
+                  setShowConflictModal(false);
+                  triggerDownload();
+                }}
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all hover-scale"
+              >
+                Download Anyway
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
