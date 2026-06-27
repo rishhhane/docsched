@@ -22,6 +22,12 @@ export const deleteDoctor = async (id) => {
   return data;
 };
 
+export const updateDoctor = async ({ id, ...doctorData }) => {
+  const { data } = await api.patch(`/api/doctors/${id}`, doctorData);
+  return data;
+};
+
+
 export const getLeaves = async () => {
   const { data } = await api.get('/api/leaves');
   return data;
@@ -84,6 +90,18 @@ export const useDeleteDoctor = () => {
     },
   });
 };
+
+export const useUpdateDoctor = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateDoctor,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
+      queryClient.invalidateQueries({ queryKey: ['schedule'] });
+    },
+  });
+};
+
 
 export const useLeaves = () => {
   return useQuery({

@@ -32,3 +32,32 @@ def delete_doctor(id):
     db.session.delete(doctor)
     db.session.commit()
     return jsonify({'message': 'Doctor deleted successfully'}), 200
+
+@doctors_bp.route('/api/doctors/<int:id>', methods=['PATCH'])
+def update_doctor(id):
+    doctor = Doctor.query.get(id)
+    if not doctor:
+        return jsonify({'error': 'Doctor not found'}), 404
+        
+    data = request.json
+    if not data:
+        return jsonify({'error': 'Invalid payload'}), 400
+        
+    if 'priority' in data:
+        try:
+            priority = int(data['priority'])
+            if priority not in [1, 2, 3]:
+                return jsonify({'error': 'Priority must be 1, 2, or 3'}), 400
+            doctor.priority = priority
+        except ValueError:
+            return jsonify({'error': 'Priority must be an integer'}), 400
+            
+    if 'name' in data:
+        name = data['name'].strip()
+        if not name:
+            return jsonify({'error': 'Name cannot be empty'}), 400
+        doctor.name = name
+        
+    db.session.commit()
+    return jsonify(doctor.to_dict()), 200
+

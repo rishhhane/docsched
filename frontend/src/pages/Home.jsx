@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDoctors, useAddDoctor, useDeleteDoctor } from '../api/apiClient';
+import { useDoctors, useAddDoctor, useDeleteDoctor, useUpdateDoctor } from '../api/apiClient';
 import { UserPlus, Trash2, Calendar, Award, ArrowRight, Activity, Users } from 'lucide-react';
 
 export default function Home() {
@@ -8,6 +8,7 @@ export default function Home() {
   const { data: doctors = [], isLoading, error } = useDoctors();
   const addDoctorMutation = useAddDoctor();
   const deleteDoctorMutation = useDeleteDoctor();
+  const updateDoctorMutation = useUpdateDoctor();
 
   const [name, setName] = useState('');
   const [priority, setPriority] = useState('1');
@@ -199,13 +200,22 @@ export default function Home() {
                     <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3.5 px-3 font-semibold text-slate-700">{doc.name}</td>
                       <td className="py-3.5 px-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${
-                          doc.priority === 1 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
-                          doc.priority === 2 ? 'bg-cyan-50 text-cyan-600 border border-cyan-200' :
-                          'bg-violet-50 text-violet-600 border border-violet-200'
-                        }`}>
-                          Priority {doc.priority}
-                        </span>
+                        <select
+                          value={doc.priority}
+                          onChange={(e) => {
+                            updateDoctorMutation.mutate({ id: doc.id, priority: parseInt(e.target.value) });
+                          }}
+                          disabled={updateDoctorMutation.isPending}
+                          className={`text-xs font-bold uppercase rounded-md border px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer transition-all bg-white font-semibold ${
+                            doc.priority === 1 ? 'text-emerald-600 border-emerald-250 bg-emerald-50/50 hover:bg-emerald-50' :
+                            doc.priority === 2 ? 'text-cyan-600 border-cyan-250 bg-cyan-50/50 hover:bg-cyan-50' :
+                            'text-violet-600 border-violet-250 bg-violet-50/50 hover:bg-violet-50'
+                          }`}
+                        >
+                          <option value="1" className="bg-white text-emerald-600 font-semibold">Priority 1</option>
+                          <option value="2" className="bg-white text-cyan-600 font-semibold">Priority 2</option>
+                          <option value="3" className="bg-white text-violet-600 font-semibold">Priority 3</option>
+                        </select>
                       </td>
                       <td className="py-3.5 px-3 text-right">
                         <button
