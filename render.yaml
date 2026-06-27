@@ -2,12 +2,9 @@ services:
   - type: web
     name: doctor-scheduler
     env: python
+    plan: free
     buildCommand: "cd frontend && npm install && npm run build && cd ../backend && pip install -r requirements.txt"
     startCommand: "cd backend && gunicorn run:app"
-    disk:
-      name: scheduler-data
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
-        value: sqlite:////data/scheduler.db
+        value: sqlite:///scheduler.db
