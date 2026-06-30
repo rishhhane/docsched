@@ -14,7 +14,8 @@ export default function Dashboard() {
   const year = parseInt(searchParams.get('year') || now.getFullYear().toString());
 
   const [showConflictModal, setShowConflictModal] = React.useState(false);
-  const [conflictDetails, setConflictDetails] = React.useState({ leaveCount: 0, consecutiveCount: 0 });
+  const [requestedFormat, setRequestedFormat] = React.useState('pdf');
+  const [conflictDetails, setConflictDetails] = React.useState({ leaveCount: 0, consecutiveCount: 0, duplicateCount: 0 });
 
   // Fetch schedule and stats
   const { data, isLoading, error } = useSchedule(month, year);
@@ -84,6 +85,18 @@ export default function Dashboard() {
     
     return violations;
   }, [data]);
+
+  const duplicateCount = React.useMemo(() => {
+    let count = 0;
+    schedules.forEach(s => {
+      const names = [s.doctor_1?.name, s.doctor_2?.name, s.doctor_3?.name].filter(Boolean);
+      const uniqueNames = new Set(names);
+      if (uniqueNames.size < names.length) {
+        count += (names.length - uniqueNames.size);
+      }
+    });
+    return count;
+  }, [schedules]);
 
   const [undoStack, setUndoStack] = React.useState([]);
   const [redoStack, setRedoStack] = React.useState([]);
@@ -173,7 +186,7 @@ export default function Dashboard() {
     return new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'long' });
   };
 
-  const handleDownloadPDF = (e) => {
+  const handleDownload = (format) => (e) => {
     // Check for violations
     const hasConsecutive = consecutiveViolations.size > 0;
     const hasLeaveViolations = schedules.some(s => {
@@ -182,8 +195,11 @@ export default function Dashboard() {
       const doc3OnLeave = s.doctor_3 && doctorLeavesMap[s.doctor_3.id]?.has(s.date);
       return doc1OnLeave || doc2OnLeave || doc3OnLeave;
     });
+    const hasDuplicateViolations = duplicateCount > 0;
 
-    if (hasConsecutive || hasLeaveViolations) {
+    setRequestedFormat(format);
+
+    if (hasConsecutive || hasLeaveViolations || hasDuplicateViolations) {
       e.preventDefault();
       // Calculate conflict counts
       let leaveCount = 0;
@@ -195,17 +211,19 @@ export default function Dashboard() {
       
       setConflictDetails({
         leaveCount,
-        consecutiveCount: consecutiveViolations.size
+        consecutiveCount: consecutiveViolations.size,
+        duplicateCount: duplicateCount
       });
       setShowConflictModal(true);
     }
   };
 
   const triggerDownload = () => {
-    const downloadUrl = `/api/export/pdf?month=${month}&year=${year}`;
+    const ext = requestedFormat === 'docx' ? 'docx' : 'pdf';
+    const downloadUrl = `/api/export/${ext}?month=${month}&year=${year}`;
     const link = document.createElement('a');
     link.href = downloadUrl;
-    link.setAttribute('download', `schedule_${year}_${month}.pdf`);
+    link.setAttribute('download', `schedule_${year}_${month}.${ext}`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -349,11 +367,20 @@ export default function Dashboard() {
           
           <a
             href={`/api/export/pdf?month=${month}&year=${year}`}
-            onClick={handleDownloadPDF}
+            onClick={handleDownload('pdf')}
             className="glow-btn flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover-scale"
           >
             <Download className="w-5 h-5" />
             Download PDF Report
+          </a>
+
+          <a
+            href={`/api/export/docx?month=${month}&year=${year}`}
+            onClick={handleDownload('docx')}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold px-5 py-2.5 rounded-xl transition-all shadow-md hover-scale"
+          >
+            <Download className="w-5 h-5" />
+            Download Word Report
           </a>
         </div>
       </div>
@@ -437,6 +464,12 @@ export default function Dashboard() {
                   <li className="flex items-center gap-2 text-amber-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                     {conflictDetails.consecutiveCount} shift assignment{conflictDetails.consecutiveCount > 1 ? 's' : ''} with consecutive violations.
+                  </li>
+                )}
+                {conflictDetails.duplicateCount > 0 && (
+                  <li className="flex items-center gap-2 text-orange-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                    {conflictDetails.duplicateCount} shift assignment{conflictDetails.duplicateCount > 1 ? 's' : ''} with duplicate doctor assignments.
                   </li>
                 )}
               </ul>
