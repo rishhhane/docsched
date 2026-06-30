@@ -1,11 +1,11 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 from app.models import db, Doctor
 
 doctors_bp = Blueprint('doctors', __name__)
 
 @doctors_bp.route('/api/doctors', methods=['GET'])
 def get_doctors():
-    doctors = Doctor.query.all()
+    doctors = Doctor.query.filter_by(user_id=session['user_id']).all()
     return jsonify([d.to_dict() for d in doctors])
 
 @doctors_bp.route('/api/doctors', methods=['POST'])
@@ -18,14 +18,14 @@ def add_doctor():
     if priority not in [1, 2, 3]:
         return jsonify({'error': 'Priority must be 1, 2, or 3'}), 400
         
-    doctor = Doctor(name=data['name'], priority=priority)
+    doctor = Doctor(name=data['name'], priority=priority, user_id=session['user_id'])
     db.session.add(doctor)
     db.session.commit()
     return jsonify(doctor.to_dict()), 201
 
 @doctors_bp.route('/api/doctors/<int:id>', methods=['DELETE'])
 def delete_doctor(id):
-    doctor = Doctor.query.get(id)
+    doctor = Doctor.query.filter_by(id=id, user_id=session['user_id']).first()
     if not doctor:
         return jsonify({'error': 'Doctor not found'}), 404
         
@@ -35,7 +35,7 @@ def delete_doctor(id):
 
 @doctors_bp.route('/api/doctors/<int:id>', methods=['PATCH'])
 def update_doctor(id):
-    doctor = Doctor.query.get(id)
+    doctor = Doctor.query.filter_by(id=id, user_id=session['user_id']).first()
     if not doctor:
         return jsonify({'error': 'Doctor not found'}), 404
         
@@ -60,4 +60,5 @@ def update_doctor(id):
         
     db.session.commit()
     return jsonify(doctor.to_dict()), 200
+
 

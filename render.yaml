@@ -1,3 +1,7 @@
+databases:
+  - name: scheduler-db
+    plan: free
+
 services:
   - type: web
     name: doctor-scheduler
@@ -7,4 +11,9 @@ services:
     startCommand: "cd backend && gunicorn run:app"
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///scheduler.db
+        fromDatabase:
+          name: scheduler-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+

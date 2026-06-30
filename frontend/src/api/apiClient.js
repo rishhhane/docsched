@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const api = axios.create({
   baseURL: '', // base URL is empty because Vite proxy handles the routing
+  withCredentials: true,
 });
 
 // --- API Functions ---
@@ -148,3 +149,67 @@ export const useUpdateSchedule = (month, year) => {
     },
   });
 };
+
+// --- Authentication APIs and Hooks ---
+
+export const loginUser = async ({ username, password }) => {
+  const { data } = await api.post('/api/login', { username, password });
+  return data;
+};
+
+export const registerUser = async ({ username, password }) => {
+  const { data } = await api.post('/api/register', { username, password });
+  return data;
+};
+
+export const logoutUser = async () => {
+  const { data } = await api.post('/api/logout');
+  return data;
+};
+
+export const getCurrentUser = async () => {
+  const { data } = await api.get('/api/me');
+  return data;
+};
+
+export const useCurrentUser = () => {
+  return useQuery({
+    queryKey: ['currentUser'],
+    queryFn: getCurrentUser,
+    retry: false,
+  });
+};
+
+export const useLogin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: loginUser,
+    onSuccess: (user) => {
+      queryClient.setQueryData(['currentUser'], user);
+      queryClient.invalidateQueries();
+    },
+  });
+};
+
+export const useRegister = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: registerUser,
+    onSuccess: (user) => {
+      queryClient.setQueryData(['currentUser'], user);
+      queryClient.invalidateQueries();
+    },
+  });
+};
+
+export const useLogout = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: logoutUser,
+    onSuccess: () => {
+      queryClient.setQueryData(['currentUser'], null);
+      queryClient.clear();
+    },
+  });
+};
+

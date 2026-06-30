@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, session
 from app.models import db, Leave, Doctor
 import datetime
 
@@ -6,7 +6,7 @@ leaves_bp = Blueprint('leaves', __name__)
 
 @leaves_bp.route('/api/leaves', methods=['GET'])
 def get_leaves():
-    leaves = Leave.query.all()
+    leaves = Leave.query.filter_by(user_id=session['user_id']).all()
     return jsonify([l.to_dict() for l in leaves])
 
 @leaves_bp.route('/api/leaves', methods=['POST'])
@@ -18,7 +18,8 @@ def save_leaves():
     doctor_id = data['doctor_id']
     leave_dates = data['leave_dates']
     
-    doctor = Doctor.query.get(doctor_id)
+    # Ensure doctor belongs to the logged-in user
+    doctor = Doctor.query.filter_by(id=doctor_id, user_id=session['user_id']).first()
     if not doctor:
         return jsonify({'error': 'Doctor not found'}), 404
         
@@ -28,15 +29,16 @@ def save_leaves():
     except ValueError:
         return jsonify({'error': 'Invalid date format, use YYYY-MM-DD'}), 400
         
-    # Delete existing leaves for this doctor to replace them
-    Leave.query.filter_by(doctor_id=doctor_id).delete()
+    # Delete existing leaves for this doctor to replace them (isolated by user_id)
+    Leave.query.filter_by(doctor_id=doctor_id, user_id=session['user_id']).delete()
     
     # Save new leaves
     for date_obj in parsed_dates:
-        leave = Leave(doctor_id=doctor_id, leave_date=date_obj)
+        leave = Leave(doctor_id=doctor_id, leave_date=date_obj, user_id=session['user_id'])
         db.session.add(leave)
         
     db.session.commit()
     
-    saved_leaves = Leave.query.filter_by(doctor_id=doctor_id).all()
+    saved_leaves = Leave.query.filter_by(doctor_id=doctor_id, user_id=session['user_id']).all()
     return jsonify([l.to_dict() for l in saved_leaves]), 200
+

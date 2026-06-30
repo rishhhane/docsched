@@ -1,4 +1,4 @@
-from flask import Blueprint, send_file, request, jsonify
+from flask import Blueprint, send_file, request, jsonify, session
 import io
 import datetime
 import calendar
@@ -35,9 +35,9 @@ def export_pdf():
     last_day = calendar.monthrange(year, month)[1]
     end_date = datetime.date(year, month, last_day)
     
-    schedules = Schedule.query.filter(Schedule.date >= start_date, Schedule.date <= end_date).order_by(Schedule.date, Schedule.shift).all()
-    doctors = Doctor.query.order_by(Doctor.priority, Doctor.name).all()
-    leaves = Leave.query.filter(Leave.leave_date >= start_date, Leave.leave_date <= end_date).all()
+    schedules = Schedule.query.filter(Schedule.date >= start_date, Schedule.date <= end_date, Schedule.user_id == session['user_id']).order_by(Schedule.date, Schedule.shift).all()
+    doctors = Doctor.query.filter_by(user_id=session['user_id']).order_by(Doctor.priority, Doctor.name).all()
+    leaves = Leave.query.filter(Leave.leave_date >= start_date, Leave.leave_date <= end_date, Leave.user_id == session['user_id']).all()
     
     # Process stats
     leaves_by_doctor = {}
@@ -367,9 +367,9 @@ def export_docx():
     last_day = calendar.monthrange(year, month)[1]
     end_date = datetime.date(year, month, last_day)
     
-    schedules = Schedule.query.filter(Schedule.date >= start_date, Schedule.date <= end_date).order_by(Schedule.date, Schedule.shift).all()
-    doctors = Doctor.query.order_by(Doctor.priority, Doctor.name).all()
-    leaves = Leave.query.filter(Leave.leave_date >= start_date, Leave.leave_date <= end_date).all()
+    schedules = Schedule.query.filter(Schedule.date >= start_date, Schedule.date <= end_date, Schedule.user_id == session['user_id']).order_by(Schedule.date, Schedule.shift).all()
+    doctors = Doctor.query.filter_by(user_id=session['user_id']).order_by(Doctor.priority, Doctor.name).all()
+    leaves = Leave.query.filter(Leave.leave_date >= start_date, Leave.leave_date <= end_date, Leave.user_id == session['user_id']).all()
     
     # Process stats
     leaves_by_doctor = {}

@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from app.models import db
 
@@ -11,27 +11,42 @@ def create_app():
                 static_url_path='/',
                 template_folder=frontend_dist)
     
-    # Configure database: Default to local SQLite file
-    db_path = os.path.join(app.root_path, '..', 'scheduler.db')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', f'sqlite:///{os.path.abspath(db_path)}')
+    # Configure database: Default to local PostgreSQL database
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-12345')
+    
+    database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:admin123@localhost:5432/schedule_db')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
-    # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Enable CORS (allow credentials for session management)
+    CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
     
     # Initialize database
     db.init_app(app)
     
     # Register Blueprints
+    from app.routes.auth import auth_bp
     from app.routes.doctors import doctors_bp
     from app.routes.leaves import leaves_bp
     from app.routes.schedule import schedule_bp
     from app.routes.export import export_bp
     
+    app.register_blueprint(auth_bp)
     app.register_blueprint(doctors_bp)
     app.register_blueprint(leaves_bp)
     app.register_blueprint(schedule_bp)
     app.register_blueprint(export_bp)
+    
+    # Enforce authentication on all API routes except login and register
+    @app.before_request
+    def require_login():
+        if request.path.startswith('/api/'):
+            if request.path not in ['/api/login', '/api/register']:
+                if 'user_id' not in session:
+                    return jsonify({'error': 'Unauthorized'}), 401
     
     # Create tables
     with app.app_context():
@@ -44,3 +59,4 @@ def create_app():
         return app.send_static_file('index.html')
         
     return app
+

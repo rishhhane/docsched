@@ -3,7 +3,7 @@ import datetime
 import calendar
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import db, Doctor, Leave, Schedule
+from app.models import db, User, Doctor, Leave, Schedule
 from app.scheduler.algorithm import generate_schedule
 
 class TestSchedulerAlgorithm(unittest.TestCase):
@@ -14,20 +14,25 @@ class TestSchedulerAlgorithm(unittest.TestCase):
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         
+        # Add test user
+        test_user = User(id=1, username="test_user", password_hash="hash")
+        self.session.add(test_user)
+        self.session.commit()
+        
         # Add test doctors
         self.doctors = [
             # Priority 1
-            Doctor(id=1, name="Dr. P1-A", priority=1),
-            Doctor(id=2, name="Dr. P1-B", priority=1),
-            Doctor(id=3, name="Dr. P1-C", priority=1),
+            Doctor(id=1, name="Dr. P1-A", priority=1, user_id=1),
+            Doctor(id=2, name="Dr. P1-B", priority=1, user_id=1),
+            Doctor(id=3, name="Dr. P1-C", priority=1, user_id=1),
             # Priority 2
-            Doctor(id=4, name="Dr. P2-A", priority=2),
-            Doctor(id=5, name="Dr. P2-B", priority=2),
-            Doctor(id=8, name="Dr. P2-C", priority=2),
+            Doctor(id=4, name="Dr. P2-A", priority=2, user_id=1),
+            Doctor(id=5, name="Dr. P2-B", priority=2, user_id=1),
+            Doctor(id=8, name="Dr. P2-C", priority=2, user_id=1),
             # Priority 3
-            Doctor(id=6, name="Dr. P3-A", priority=3),
-            Doctor(id=7, name="Dr. P3-B", priority=3),
-            Doctor(id=9, name="Dr. P3-C", priority=3)
+            Doctor(id=6, name="Dr. P3-A", priority=3, user_id=1),
+            Doctor(id=7, name="Dr. P3-B", priority=3, user_id=1),
+            Doctor(id=9, name="Dr. P3-C", priority=3, user_id=1)
         ]
         self.session.bulk_save_objects(self.doctors)
         self.session.commit()
@@ -42,7 +47,7 @@ class TestSchedulerAlgorithm(unittest.TestCase):
         year = 2026
         last_day = calendar.monthrange(year, month)[1]
         
-        schedules = generate_schedule(self.session, month, year)
+        schedules = generate_schedule(self.session, month, year, 1)
         
         # We expect 2 shifts per day, for 30 days = 60 shifts
         self.assertEqual(len(schedules), 60)
@@ -55,7 +60,7 @@ class TestSchedulerAlgorithm(unittest.TestCase):
             
     def test_no_back_to_back_shifts(self):
         # Generate schedule
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         
         schedules = self.session.query(Schedule).all()
         # Sort chronologically (morning then evening)
@@ -84,12 +89,12 @@ class TestSchedulerAlgorithm(unittest.TestCase):
 
     def test_leave_day_exclusion(self):
         # Set leaves for Dr. P1-A (id=1) on June 5th and June 6th
-        leave1 = Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 5))
-        leave2 = Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 6))
+        leave1 = Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 5), user_id=1)
+        leave2 = Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 6), user_id=1)
         self.session.add_all([leave1, leave2])
         self.session.commit()
         
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         
         schedules = self.session.query(Schedule).filter(
             Schedule.date.in_([datetime.date(2026, 6, 5), datetime.date(2026, 6, 6)])
@@ -102,13 +107,13 @@ class TestSchedulerAlgorithm(unittest.TestCase):
     def test_priority_fallbacks(self):
         # If we put all P2 doctors on leave for June 10th
         # Slot 2 (P2 slot) should fallback to P1 in the morning shift
-        leave_p2_1 = Leave(doctor_id=4, leave_date=datetime.date(2026, 6, 10))
-        leave_p2_2 = Leave(doctor_id=5, leave_date=datetime.date(2026, 6, 10))
-        leave_p2_3 = Leave(doctor_id=8, leave_date=datetime.date(2026, 6, 10))
+        leave_p2_1 = Leave(doctor_id=4, leave_date=datetime.date(2026, 6, 10), user_id=1)
+        leave_p2_2 = Leave(doctor_id=5, leave_date=datetime.date(2026, 6, 10), user_id=1)
+        leave_p2_3 = Leave(doctor_id=8, leave_date=datetime.date(2026, 6, 10), user_id=1)
         self.session.add_all([leave_p2_1, leave_p2_2, leave_p2_3])
         self.session.commit()
         
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         
         # Query morning schedule on June 10th
         s = self.session.query(Schedule).filter_by(date=datetime.date(2026, 6, 10), shift='morning').first()
@@ -122,14 +127,14 @@ class TestSchedulerAlgorithm(unittest.TestCase):
     def test_no_replace_for_p1(self):
         # Put all P1 doctors (id=1,2,3) on leave for June 12th
         leaves = [
-            Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 12)),
-            Leave(doctor_id=2, leave_date=datetime.date(2026, 6, 12)),
-            Leave(doctor_id=3, leave_date=datetime.date(2026, 6, 12))
+            Leave(doctor_id=1, leave_date=datetime.date(2026, 6, 12), user_id=1),
+            Leave(doctor_id=2, leave_date=datetime.date(2026, 6, 12), user_id=1),
+            Leave(doctor_id=3, leave_date=datetime.date(2026, 6, 12), user_id=1)
         ]
         self.session.add_all(leaves)
         self.session.commit()
         
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         
         # Verify that for June 12th shifts, Slot 1 is empty (None)
         schedules = self.session.query(Schedule).filter_by(date=datetime.date(2026, 6, 12)).all()
@@ -139,7 +144,7 @@ class TestSchedulerAlgorithm(unittest.TestCase):
 
     def test_max_consecutive_days(self):
         # Generate schedule
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         
         schedules = self.session.query(Schedule).all()
         
@@ -163,7 +168,7 @@ class TestSchedulerAlgorithm(unittest.TestCase):
 
     def test_workload_balance(self):
         # Over a month (30 days), we check if the schedules are relatively balanced.
-        generate_schedule(self.session, 6, 2026)
+        generate_schedule(self.session, 6, 2026, 1)
         schedules = self.session.query(Schedule).all()
         
         # Calculate counts
@@ -191,3 +196,4 @@ class TestSchedulerAlgorithm(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
