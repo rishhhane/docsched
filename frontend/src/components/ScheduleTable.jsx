@@ -68,6 +68,15 @@ export default function ScheduleTable({ schedules, allDoctors, doctorLeavesMap =
               const doc2Violation = s.doctor_2 && consecutiveViolations.has(`${s.date}_${s.shift}_${s.doctor_2.id}`);
               const doc3Violation = s.doctor_3 && consecutiveViolations.has(`${s.date}_${s.shift}_${s.doctor_3.id}`);
 
+              // Determine if doctors are repeated on the same shift row across P1/P2/P3
+              const name1 = s.doctor_1?.name;
+              const name2 = s.doctor_2?.name;
+              const name3 = s.doctor_3?.name;
+
+              const doc1Repeated = name1 && (name1 === name2 || name1 === name3);
+              const doc2Repeated = name2 && (name2 === name1 || name2 === name3);
+              const doc3Repeated = name3 && (name3 === name1 || name3 === name2);
+
               return (
                 <tr key={s.id} className={`transition-colors hover:bg-slate-100/50 ${isWeekend ? 'bg-slate-100/30' : ''}`}>
                   {/* Date column */}
@@ -111,6 +120,10 @@ export default function ScheduleTable({ schedules, allDoctors, doctorLeavesMap =
                             ) : doc1Violation ? (
                               <span className="text-rose-600 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse" title={`${s.doctor_1.name} has consecutive shifts (no rest gap)!`}>
                                 🚨 {s.doctor_1.name} (Consecutive)
+                              </span>
+                            ) : doc1Repeated ? (
+                              <span className="text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1" title={`${s.doctor_1.name} is assigned multiple times on this shift!`}>
+                                🔄 {s.doctor_1.name} (Duplicate)
                               </span>
                             ) : (
                               <span className="text-slate-700 group-hover:text-emerald-600 transition-colors font-medium">
@@ -158,6 +171,10 @@ export default function ScheduleTable({ schedules, allDoctors, doctorLeavesMap =
                               <span className="text-rose-600 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse" title={`${s.doctor_2.name} has consecutive shifts (no rest gap)!`}>
                                 🚨 {s.doctor_2.name} (Consecutive)
                               </span>
+                            ) : doc2Repeated ? (
+                              <span className="text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1" title={`${s.doctor_2.name} is assigned multiple times on this shift!`}>
+                                🔄 {s.doctor_2.name} (Duplicate)
+                              </span>
                             ) : (
                               <span className="text-slate-700 group-hover:text-cyan-600 transition-colors font-medium">
                                 {s.doctor_2.name}
@@ -203,6 +220,10 @@ export default function ScheduleTable({ schedules, allDoctors, doctorLeavesMap =
                             ) : doc3Violation ? (
                               <span className="text-rose-600 font-bold bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse" title={`${s.doctor_3.name} has consecutive shifts (no rest gap)!`}>
                                 🚨 {s.doctor_3.name} (Consecutive)
+                              </span>
+                            ) : doc3Repeated ? (
+                              <span className="text-amber-600 font-bold bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1" title={`${s.doctor_3.name} is assigned multiple times on this shift!`}>
+                                🔄 {s.doctor_3.name} (Duplicate)
                               </span>
                             ) : (
                               <span className="text-slate-700 group-hover:text-brand-600 transition-colors font-medium">

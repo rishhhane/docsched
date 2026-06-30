@@ -68,13 +68,20 @@ export default function StatsPanel({ stats, rankings }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-sm">
-              {stats.map((s) => (
-                <tr key={s.doctor_id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-3 font-semibold text-slate-750">{s.doctor_name}</td>
-                  <td className="py-3 px-3 text-center">
-                    <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${getPriorityBadgeColor(s.priority)}`}>
-                      P{s.priority}
-                    </span>
+              {[...stats]
+                .sort((a, b) => {
+                  if (a.priority !== b.priority) {
+                    return a.priority - b.priority;
+                  }
+                  return a.doctor_name.localeCompare(b.doctor_name);
+                })
+                .map((s) => (
+                  <tr key={s.doctor_id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-slate-750">{s.doctor_name}</td>
+                    <td className="py-3 px-3 text-center">
+                      <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${getPriorityBadgeColor(s.priority)}`}>
+                        P{s.priority}
+                      </span>
                   </td>
                   <td className="py-3 px-3 text-center text-slate-600">{s.morning_shifts}</td>
                   <td className="py-3 px-3 text-center text-slate-600">{s.evening_shifts}</td>

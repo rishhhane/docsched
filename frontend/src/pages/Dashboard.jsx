@@ -378,7 +378,7 @@ export default function Dashboard() {
               doctorLeavesMap={doctorLeavesMap}
               consecutiveViolations={consecutiveViolations}
               onUpdate={handleUpdateSlot}
-              title="Morning Shift (08:00 - 16:00)"
+              title="Day Shift"
               headerColor="bg-amber-50 border-b border-amber-200 text-amber-800"
               scrollRef={morningScrollRef}
               onScroll={handleMorningScroll}
@@ -390,7 +390,7 @@ export default function Dashboard() {
               doctorLeavesMap={doctorLeavesMap}
               consecutiveViolations={consecutiveViolations}
               onUpdate={handleUpdateSlot}
-              title="Evening Shift (16:00 - 00:00)"
+              title="Evening Shift"
               headerColor="bg-brand-50 border-b border-brand-200 text-brand-800"
               scrollRef={eveningScrollRef}
               onScroll={handleEveningScroll}

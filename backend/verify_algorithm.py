@@ -104,7 +104,8 @@ class TestSchedulerAlgorithm(unittest.TestCase):
         # Slot 2 (P2 slot) should fallback to P1 in the morning shift
         leave_p2_1 = Leave(doctor_id=4, leave_date=datetime.date(2026, 6, 10))
         leave_p2_2 = Leave(doctor_id=5, leave_date=datetime.date(2026, 6, 10))
-        self.session.add_all([leave_p2_1, leave_p2_2])
+        leave_p2_3 = Leave(doctor_id=8, leave_date=datetime.date(2026, 6, 10))
+        self.session.add_all([leave_p2_1, leave_p2_2, leave_p2_3])
         self.session.commit()
         
         generate_schedule(self.session, 6, 2026)

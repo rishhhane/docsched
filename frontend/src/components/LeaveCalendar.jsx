@@ -1,6 +1,12 @@
 import React from 'react';
 
 export default function LeaveCalendar({ doctor, month, year, selectedDates = [], onChange }) {
+  const [lastClickedDate, setLastClickedDate] = React.useState(null);
+
+  React.useEffect(() => {
+    setLastClickedDate(null);
+  }, [doctor, month, year]);
+
   if (!doctor) {
     return (
       <div className="glass-panel rounded-2xl p-8 text-center text-slate-400 border border-slate-200">
@@ -25,13 +31,34 @@ export default function LeaveCalendar({ doctor, month, year, selectedDates = [],
     days.push({ dayNum: d, dateStr });
   }
 
-  const handleDateClick = (dateStr) => {
+  const handleDateClick = (dateStr, e) => {
     let updated;
-    if (selectedDates.includes(dateStr)) {
-      updated = selectedDates.filter(d => d !== dateStr);
+    if (e.shiftKey && lastClickedDate) {
+      const startDay = parseInt(lastClickedDate.split('-')[2]);
+      const endDay = parseInt(dateStr.split('-')[2]);
+      const minDay = Math.min(startDay, endDay);
+      const maxDay = Math.max(startDay, endDay);
+      
+      const rangeDates = [];
+      for (let d = minDay; d <= maxDay; d++) {
+        const dStr = `${year}-${month.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+        rangeDates.push(dStr);
+      }
+      
+      const shouldSelect = selectedDates.includes(lastClickedDate);
+      if (shouldSelect) {
+        updated = Array.from(new Set([...selectedDates, ...rangeDates]));
+      } else {
+        updated = selectedDates.filter(d => !rangeDates.includes(d));
+      }
     } else {
-      updated = [...selectedDates, dateStr];
+      if (selectedDates.includes(dateStr)) {
+        updated = selectedDates.filter(d => d !== dateStr);
+      } else {
+        updated = [...selectedDates, dateStr];
+      }
     }
+    setLastClickedDate(dateStr);
     onChange(updated);
   };
 
@@ -111,7 +138,7 @@ export default function LeaveCalendar({ doctor, month, year, selectedDates = [],
             <button
               key={d.dateStr}
               type="button"
-              onClick={() => handleDateClick(d.dateStr)}
+              onClick={(e) => handleDateClick(d.dateStr, e)}
               className={`
                 aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-200 hover-scale
                 ${isSelected 

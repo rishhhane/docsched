@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDoctors, useLeaves, useSaveLeaves, useGenerateSchedule } from '../api/apiClient';
+import { useDoctors, useLeaves, useSaveLeaves, useGenerateSchedule, useSchedule } from '../api/apiClient';
 import LeaveCalendar from '../components/LeaveCalendar';
 import { Calendar, UserCheck, Play, ArrowRight, ArrowLeft } from 'lucide-react';
 
@@ -12,11 +12,14 @@ export default function ScheduleWizard() {
   const generateScheduleMutation = useGenerateSchedule();
 
   const [step, setStep] = useState(1);
+  const [showExistModal, setShowExistModal] = useState(false);
   
   // Date state
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
+  
+  const { data: scheduleData } = useSchedule(month, year);
   
   // Selected doctor for leave editing
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
@@ -36,7 +39,16 @@ export default function ScheduleWizard() {
     });
   };
 
-  const handleGenerate = () => {
+  const handleGenerateClick = () => {
+    if (scheduleData && scheduleData.schedules && scheduleData.schedules.length > 0) {
+      setShowExistModal(true);
+    } else {
+      handleGenerateNew();
+    }
+  };
+
+  const handleGenerateNew = () => {
+    setShowExistModal(false);
     generateScheduleMutation.mutate(
       { month, year },
       {
@@ -46,6 +58,11 @@ export default function ScheduleWizard() {
         }
       }
     );
+  };
+
+  const handleKeepOld = () => {
+    setShowExistModal(false);
+    navigate(`/dashboard?month=${month}&year=${year}`);
   };
 
   const monthsList = [
@@ -263,7 +280,7 @@ export default function ScheduleWizard() {
 
               <button
                 type="button"
-                onClick={handleGenerate}
+                onClick={handleGenerateClick}
                 disabled={generateScheduleMutation.isPending}
                 className="bg-brand-600 hover:bg-brand-500 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold px-8 py-3 rounded-xl transition-all shadow-md hover-scale flex items-center gap-2"
               >
@@ -283,6 +300,53 @@ export default function ScheduleWizard() {
           </div>
         )}
       </div>
+
+      {showExistModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-6 transform scale-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-600 shrink-0">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black text-slate-800">
+                  Existing Schedule Found
+                </h3>
+                <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                  {monthsList.find(m => m.value === month)?.label} {year}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 space-y-3">
+              <p className="text-sm text-slate-600 leading-relaxed">
+                An active schedule already exists for this month. Choose how you want to proceed:
+              </p>
+              <div className="text-xs space-y-1 text-slate-500">
+                <p>• <strong>New Schedule</strong>: Overwrites the old schedule and generates a fresh one based on the current configuration.</p>
+                <p>• <strong>Old Schedule</strong>: Keeps your previous schedule, preserving all swaps and custom edits you made.</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <button
+                type="button"
+                onClick={handleKeepOld}
+                className="w-full sm:flex-1 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl border border-slate-200 shadow-sm transition-all hover-scale"
+              >
+                Old Schedule
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateNew}
+                className="w-full sm:flex-1 bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 px-4 rounded-xl shadow-md transition-all hover-scale"
+              >
+                New Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
